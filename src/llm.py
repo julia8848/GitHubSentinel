@@ -1,6 +1,6 @@
 # src/llm.py
 
-import os
+import json
 from openai import OpenAI
 
 class LLM:

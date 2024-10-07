@@ -83,11 +83,17 @@ class GitHubClient:
         date_str = f"{since}_to_{today}"
         file_path = os.path.join(repo_dir, f'{date_str}.md')  # 构建文件路径
         
+        file_content = f"# Progress for {repo} ({since} to {today})\n\n"
+        file_content += f"\n## Issues Closed in the Last {days} Days\n"
+        for issue in updates['issues']:
+            file_content += f"- {issue['title']} #{issue['number']}\n"
+        file_content += f"\n## Pull Requests Closed in the Last {days} Days\n"
+        for pull_request in updates['pull_requests']:
+            file_content += f"- {pull_request['title']} #{pull_request['number']}\n"
+
         with open(file_path, 'w') as file:
-            file.write(f"# Progress for {repo} ({since} to {today})\n\n")
-            file.write(f"\n## Issues Closed in the Last {days} Days\n")
-            for issue in updates['issues']:  # 写入在指定日期内关闭的问题
-                file.write(f"- {issue['title']} #{issue['number']}\n")
+            file.write(file_content)
+
         
         LOG.info(f"Exported time-range progress to {file_path}")  # 记录日志
-        return file_path
+        return file_content, file_path

@@ -12,6 +12,9 @@ PID_FILE="./run/$DAEMON_NAME.pid"
 
 # 启动守护进程的函数
 start() {
+    # 创建日志和 PID 文件的目录（如果不存在）
+    [ ! -d "./logs" ] && mkdir -p ./logs
+    [ ! -d "./run" ] && mkdir -p ./run
     echo "Starting $DAEMON_NAME..."
     # 使用 nohup 命令在后台运行 Python 脚本，并将输出重定向到日志文件
     nohup python3 $DAEMON_PATH > $LOG_FILE 2>&1 &

@@ -8,10 +8,15 @@ class LLM:
         # 创建一个OpenAI客户端实例
         self.client = OpenAI()
         # 从TXT文件加载提示信息
-        with open("prompts/report_prompt.txt", "r", encoding='utf-8') as file:
+        self.load_system_prompt("report_prompt.txt")
+
+    def load_system_prompt(self, filename):
+        with open(f"prompts/{filename}", "r", encoding='utf-8') as file:
             self.system_prompt = file.read()
 
-    def generate_daily_report(self, markdown_content, dry_run=False):
+
+    def generate_gpt_report(self, prompt_filename, markdown_content, dry_run=False):
+        self.load_system_prompt(prompt_filename)
         # 使用从TXT文件加载的提示信息
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -33,6 +38,7 @@ class LLM:
         
         try:
             # 调用OpenAI GPT模型生成报告
+            LOG.debug("GPT prompt: {}", messages)
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",  # 指定使用的模型版本
                 messages=messages
@@ -44,3 +50,27 @@ class LLM:
             # 如果在请求过程中出现异常，记录错误并抛出
             LOG.error(f"生成报告时发生错误：{e}")
             raise
+
+
+
+    def generate_daily_report(self, markdown_content, dry_run=False):
+        try:
+            return self.generate_gpt_report("report_prompt.txt", markdown_content, dry_run)
+        except:
+            raise
+            
+    def generate_hacker_news_report(self, markdown_content, dry_run=False):
+        try:
+            return self.generate_gpt_report("hacker_news_report_prompt.txt", markdown_content, dry_run)
+        except:
+            raise
+
+
+if __name__ == '__main__':
+    response = OpenAI().chat.completions.create(
+        model="gpt-4o-mini",  # 指定使用的模型版本
+        messages=[
+            {"role": "user", "content": "Hello"}
+        ]
+    )
+    print(response.choices[0].message.content)

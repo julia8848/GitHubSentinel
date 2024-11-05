@@ -5,6 +5,7 @@ import sys  # 导入sys库，用于执行系统相关的操作
 
 from config import Config  # 导入配置管理类
 from github_client import GitHubClient  # 导入GitHub客户端类，处理GitHub API请求
+from hacker_news_client import HackerNewsClient
 from notifier import Notifier  # 导入通知器类，用于发送通知
 from report_generator import ReportGenerator  # 导入报告生成器类
 from llm import LLM  # 导入语言模型类，可能用于生成报告内容
@@ -18,7 +19,7 @@ def graceful_shutdown(signum, frame):
     sys.exit(0)  # 安全退出程序
 
 def github_job(subscription_manager, github_client, report_generator, notifier, days):
-    LOG.info("[开始执行定时任务]")
+    LOG.info("[开始执行Github定时任务]")
     subscriptions = subscription_manager.list_subscriptions()  # 获取当前所有订阅
     LOG.info(f"订阅列表：{subscriptions}")
     for repo in subscriptions:
@@ -27,8 +28,14 @@ def github_job(subscription_manager, github_client, report_generator, notifier, 
         # 从Markdown文件自动生成进展简报
         report, report_file_path = report_generator.generate_report_by_date_range(markdown_file_path, days)
         notifier.notify(repo, report)
-    LOG.info(f"[定时任务执行完毕]")
+    LOG.info(f"[Github定时任务执行完毕]")
 
+def hacker_news_job(hacker_news_client: HackerNewsClient, report_generator: ReportGenerator, notifier: Notifier):
+    LOG.info("[开始执行Hacker New定时任务]")
+    markdown_file_path = hacker_news_client.export_progress()
+    report, report_file_path = report_generator.generate_hacker_news_report(markdown_file_path)
+    notifier.notify_for_hacker_news(report)
+    LOG.info("[Hacker News定时任务执行完毕]")
 
 def main():
     # 设置信号处理器
@@ -48,6 +55,11 @@ def main():
     schedule.every(config.freq_days).days.at(
         config.exec_time
     ).do(github_job, subscription_manager, github_client, report_generator, notifier, config.freq_days)
+
+
+    hacker_news_client = HackerNewsClient()
+    hacker_news_job(hacker_news_client, report_generator, notifier)
+    schedule.every().hours.do(hacker_news_job, hacker_news_client, report_generator, notifier)
 
     try:
         # 在守护进程中持续运行

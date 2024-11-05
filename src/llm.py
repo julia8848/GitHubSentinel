@@ -19,11 +19,27 @@ class LLM:
         else:
             raise ValueError(f"Unsupported model type: {self.model}")  # 如果模型类型不支持，抛出错误
         
-        # 从TXT文件加载系统提示信息
-        with open("prompts/report_prompt.txt", "r", encoding='utf-8') as file:
+        self.load_system_prompt("report_prompt.txt")
+
+    def load_system_prompt(self, filename):
+        with open(f"prompts/{filename}", "r", encoding='utf-8') as file:
             self.system_prompt = file.read()
 
     def generate_daily_report(self, markdown_content, dry_run=False):
+        self.load_system_prompt("report_prompt.txt")
+        try:
+            return self.generate_report(markdown_content, dry_run=dry_run)
+        except:
+            raise
+
+    def generate_hacker_news_report(self, markdown_content, dry_run=False):
+        self.load_system_prompt("hacker_news_report_prompt.txt")
+        try:
+            return self.generate_report(markdown_content, dry_run=dry_run)
+        except:
+            raise
+
+    def generate_report(self, markdown_content, dry_run=False):
         """
         生成每日报告，根据配置选择不同的模型来处理请求。
         

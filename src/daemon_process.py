@@ -10,7 +10,7 @@ from report_generator import ReportGenerator  # 导入报告生成器类
 from llm import LLM  # 导入语言模型类，可能用于生成报告内容
 from subscription_manager import SubscriptionManager  # 导入订阅管理器类，管理GitHub仓库订阅
 from logger import LOG  # 导入日志记录器
-
+from hacker_news_client import HackerNewsClient
 
 def graceful_shutdown(signum, frame):
     # 优雅关闭程序的函数，处理信号时调用
@@ -29,6 +29,12 @@ def github_job(subscription_manager, github_client, report_generator, notifier, 
         notifier.notify(repo, report)
     LOG.info(f"[定时任务执行完毕]")
 
+def hacker_news_job(hacker_news_client: HackerNewsClient, report_generator: ReportGenerator, notifier: Notifier):
+    LOG.info("[开始执行Hacker New定时任务]")
+    markdown_file_path = hacker_news_client.export_progress()
+    report, report_file_path = report_generator.generate_hacker_news_report(markdown_file_path)
+    notifier.notify_for_hacker_news(report)
+    LOG.info("[Hacker News定时任务执行完毕]")
 
 def main():
     # 设置信号处理器
@@ -49,6 +55,10 @@ def main():
         config.exec_time
     ).do(github_job, subscription_manager, github_client, report_generator, notifier, config.freq_days)
 
+    hacker_news_client = HackerNewsClient()
+    hacker_news_job(hacker_news_client, report_generator, notifier)
+    schedule.every().hours.do(hacker_news_job, hacker_news_client, report_generator, notifier)
+    
     try:
         # 在守护进程中持续运行
         while True:

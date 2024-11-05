@@ -10,29 +10,45 @@ class Notifier:
     
     def notify(self, repo, report):
         if self.email_settings:
-            self.send_email(repo, report)
+            self.send_github_report(repo, report)
         else:
             LOG.warning("邮件设置未配置正确，无法发送通知")
-    
-    def send_email(self, repo, report):
+
+    def notify_for_hacker_news(self, report):
+        if self.email_settings:
+            self.send_hacker_news_report(report)
+        else:
+            LOG.warning("邮件设置未配置正确，无法发送通知")
+
+    def send_github_report(self, repo, report):
+        subject = f"[GitHubSentinel]{repo} 进展简报"
+        self.send_email(subject, markdown_content=report)
+
+    def send_hacker_news_report(self, report):
+        subject = "[GitHubSentinel] Hacker news 最新消息"
+        self.send_email(subject, report)
+
+    def send_email(self, subject, markdown_content):
         LOG.info("准备发送邮件")
         msg = MIMEMultipart()
         msg['From'] = self.email_settings['from']
         msg['To'] = self.email_settings['to']
-        msg['Subject'] = f"[GitHubSentinel]{repo} 进展简报"
+        msg['Subject'] = subject
         
         # 将Markdown内容转换为HTML
-        html_report = markdown2.markdown(report)
+        html_report = markdown2.markdown(markdown_content)
 
         msg.attach(MIMEText(html_report, 'html'))
+        sent = False # 标记邮件是否发送成功
         try:
             with smtplib.SMTP_SSL(self.email_settings['smtp_server'], self.email_settings['smtp_port']) as server:
                 LOG.debug("登录SMTP服务器")
                 server.login(msg['From'], self.email_settings['password'])
                 server.sendmail(msg['From'], msg['To'], msg.as_string())
                 LOG.info("邮件发送成功！")
+                sent = True
         except Exception as e:
-            LOG.error(f"发送邮件失败：{str(e)}")
+            if not sent: LOG.error(f"发送邮件失败：{str(e)}")
 
 if __name__ == '__main__':
     from config import Config

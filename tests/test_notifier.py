@@ -39,6 +39,22 @@ class TestNotifier(unittest.TestCase):
         ## Top 1：硬盘驱动器的讨论引发热门讨论
         """
 
+        self.test_arxiv_report = """
+        ## 关于眼动追踪最新研究进展报告
+
+        ### 报告日期：2024年11月06日
+
+        ### 眼动追踪在人机交互中的应用
+
+        - **阅读跟踪** ([8]([https://arxiv.org/abs/2409.18753]))：
+            研究人员利用大语言模型的上下文感知能力开发了一种新的阅读跟踪系统，该系统能够有效地跟踪用户的阅读路径，并对跳跃阅读实现 84% 的准确率。
+
+        ### 总体趋势
+
+        - **眼动追踪技术的精度和效率不断提高**：深度学习模型和事件相机等新技术的应用为眼动追踪带来了显著的进步。
+        - **眼动追踪在更多领域得到应用**：除了传统的 HCI 领域之外，眼动追踪技术也开始应用于教育、医疗、市场研究等领域，并发挥着越来越重要的作用。
+        """
+
         # 设置日志捕获
         self.log_capture = StringIO()
         self.capture_id = LOG.add(self.log_capture, level="INFO")
@@ -69,6 +85,18 @@ class TestNotifier(unittest.TestCase):
         """
         # 执行邮件发送
         self.notifier.notify_hn_report("2024-09-01", self.test_hn_report)
+
+        # 获取并检查日志内容
+        log_content = self.log_capture.getvalue()
+        self.assertIn("邮件发送成功！", log_content)
+
+    @patch('smtplib.SMTP_SSL')
+    def test_notify_arxiv_report_success(self, mock_smtp):
+        """
+        测试在邮件配置正确的情况下，Hacker News 报告邮件是否成功发送，并检查日志输出。
+        """
+        # 执行邮件发送
+        self.notifier.notify_arxiv_report(keywords="gaze tracking", report=self.test_arxiv_report)
 
         # 获取并检查日志内容
         log_content = self.log_capture.getvalue()

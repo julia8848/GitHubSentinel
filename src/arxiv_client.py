@@ -11,9 +11,15 @@ class ArxivClient:
         return self.url_template.format(keywords=keywords) 
 
     def get_top_articles(self, keywords):
-        response = requests.get(self.get_url(keywords))
-        top_articles = self.parse_articles(response.text)
-        return top_articles
+        LOG.debug(f"Fetching Arxiv articles: {keywords}")
+        try:
+            response = requests.get(self.get_url(keywords), timeout=10)
+            response.raise_for_status()  # 检查请求是否成功
+            top_articles = self.parse_articles(response.text)
+            return top_articles
+        except Exception as e:
+            LOG.error(f"Fail to fetch Arxiv articles：{str(e)}")
+            return []
 
 
     def parse_articles(self, html_content):

@@ -1,8 +1,9 @@
 import os
 from logger import LOG  # 导入日志模块
+from llm import LLM
 
 class ReportGenerator:
-    def __init__(self, llm, report_types):
+    def __init__(self, llm: LLM, report_types):
         self.llm = llm  # 初始化时接受一个LLM实例，用于后续生成报告
         self.report_types = report_types
         self.prompts = {}  # 存储所有预加载的提示信息
@@ -19,6 +20,23 @@ class ReportGenerator:
                 raise FileNotFoundError(f"提示文件未找到: {prompt_file}")
             with open(prompt_file, "r", encoding='utf-8') as file:
                 self.prompts[report_type] = file.read()
+
+    def generate_arxiv_report(self, markdown_file_path):
+        """
+        生成 Arxiv 关键字检索的报告，并保存为 {original_filename}_report.md。
+        """
+        with open(markdown_file_path, 'r') as file:
+            markdown_content = file.read()
+
+        system_prompt = self.prompts.get("arxiv")
+        report = self.llm.generate_report(system_prompt, markdown_content)
+        
+        report_file_path = os.path.splitext(markdown_file_path)[0] + "_report.md"
+        with open(report_file_path, 'w+') as report_file:
+            report_file.write(report)
+
+        LOG.info(f"Arxiv 关键字检索报告已保存到 {report_file_path}")
+        return report, report_file_path
 
     def generate_github_report(self, markdown_file_path):
         """

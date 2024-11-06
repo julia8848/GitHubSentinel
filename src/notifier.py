@@ -32,6 +32,18 @@ class Notifier:
         else:
             LOG.warning("邮件设置未配置正确，无法发送 Hacker News 报告通知")
     
+    def notify_arxiv_report(self, keywords, report):
+        """
+        发送 Arxiv 最新研究报告邮件
+        :param keywords: 文献检索关键字
+        :param report: 报告内容
+        """
+        if self.email_settings:
+            subject = f"[Arxiv] {keywords} 最新研究进展"
+            self.send_email(subject, report)
+        else:
+            LOG.warning("邮件设置未配置正确，无法发送 Arxiv 报告通知")
+
     def send_email(self, subject, report):
         LOG.info(f"准备发送邮件:{subject}")
         msg = MIMEMultipart()

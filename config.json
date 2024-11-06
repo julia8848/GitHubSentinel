@@ -5,23 +5,29 @@
         "progress_frequency_days": 1,
         "progress_execution_time": "08:00"
     },
+    "arxiv": {
+        "subscriptions_file": "keywords.json",
+        "progress_frequency_days": 1,
+        "progress_execution_time": "08:00"
+    },
     "email":  {
-        "smtp_server": "smtp.exmail.qq.com",
+        "smtp_server": "smtp.qq.com",
         "smtp_port": 465,
-        "from": "pjt@zaijidata.com",
+        "from": "circle_2006@qq.com",
         "password": "",
-        "to": "test@zaijidata.com"
+        "to": "julia8848@163.com"
     },
     "llm": {
         "model_type": "ollama",
         "openai_model_name": "gpt-4o-mini",
-        "ollama_model_name": "llama3.1",
+        "ollama_model_name": "llama3.1:8b-instruct-q8_0",
         "ollama_api_url": "http://localhost:11434/api/chat"
     },
     "report_types": [
         "github",
         "hacker_news_hours_topic",
-        "hacker_news_daily_report"
+        "hacker_news_daily_report",
+        "arxiv"
     ],
     "slack": {
         "webhook_url": "your_slack_webhook_url"

@@ -13,6 +13,7 @@ from report_generator import ReportGenerator  # 导入报告生成器类
 from llm import LLM  # 导入语言模型类，可能用于生成报告内容
 from subscription_manager import SubscriptionManager  # 导入订阅管理器类，管理GitHub仓库订阅
 from logger import LOG  # 导入日志记录器
+from arxiv_client import ArxivClient
 
 
 def graceful_shutdown(signum, frame):
@@ -24,20 +25,26 @@ def github_job(subscription_manager, github_client, report_generator, notifier, 
     LOG.info("[开始执行定时任务]GitHub Repo 项目进展报告")
     subscriptions = subscription_manager.list_subscriptions()  # 获取当前所有订阅
     LOG.info(f"订阅列表：{subscriptions}")
-    for repo in subscriptions:
-        # 遍历每个订阅的仓库，执行以下操作
-        markdown_file_path = github_client.export_progress_by_date_range(repo, days)
-        # 从Markdown文件自动生成进展简报
-        report, _ = report_generator.generate_github_report(markdown_file_path)
-        notifier.notify_github_report(repo, report)
-    LOG.info(f"[定时任务执行完毕]")
+    try:
+        for repo in subscriptions:
+            # 遍历每个订阅的仓库，执行以下操作
+            markdown_file_path = github_client.export_progress_by_date_range(repo, days)
+            # 从Markdown文件自动生成进展简报
+            report, _ = report_generator.generate_github_report(markdown_file_path)
+            notifier.notify_github_report(repo, report)
+        LOG.info(f"[定时任务执行完毕]")
+    except Exception as e:
+        LOG.error(f"[定时任务执行失败] {e}")
 
 
 def hn_topic_job(hacker_news_client, report_generator):
     LOG.info("[开始执行定时任务]Hacker News 热点话题跟踪")
     markdown_file_path = hacker_news_client.export_top_stories()
-    _, _ = report_generator.generate_hn_topic_report(markdown_file_path)
-    LOG.info(f"[定时任务执行完毕]")
+    try:
+        _, _ = report_generator.generate_hn_topic_report(markdown_file_path)
+        LOG.info(f"[定时任务执行完毕]")
+    except Exception as e:
+        LOG.error(f"[定时任务执行失败] {e}")
 
 
 def hn_daily_job(hacker_news_client, report_generator, notifier):
@@ -46,10 +53,27 @@ def hn_daily_job(hacker_news_client, report_generator, notifier):
     date = datetime.now().strftime('%Y-%m-%d')
     # 生成每日汇总报告的目录路径
     directory_path = os.path.join('hacker_news', date)
-    # 生成每日汇总报告并保存
-    report, _ = report_generator.generate_hn_daily_report(directory_path)
-    notifier.notify_hn_report(date, report)
-    LOG.info(f"[定时任务执行完毕]")
+    try:
+        # 生成每日汇总报告并保存
+        report, _ = report_generator.generate_hn_daily_report(directory_path)
+        notifier.notify_hn_report(date, report)
+        LOG.info(f"[定时任务执行完毕]")
+    except Exception as e:
+        LOG.error(f"[定时任务执行失败] {e}")
+
+
+def arxiv_job(keywords_manager: SubscriptionManager, arxiv_client: ArxivClient, report_generator: ReportGenerator, notifier: Notifier):
+    LOG.info("[开始执行定时任务]Arxiv最新文献检索报告")
+    subscriptions = keywords_manager.list_subscriptions()  # 获取当前所有订阅
+    LOG.info(f"订阅列表：{subscriptions}")
+    try:
+        for keywords in subscriptions:
+            markdown_file_path = arxiv_client.export_top_articles(keywords)
+            report, _ = report_generator.generate_arxiv_report(markdown_file_path)
+            notifier.notify_arxiv_report(keywords, report)
+        LOG.info(f"[定时任务执行完毕]")
+    except Exception as e:
+        LOG.error(f"[定时任务执行失败] {e}")
 
 
 def main():
@@ -59,14 +83,17 @@ def main():
     config = Config()  # 创建配置实例
     github_client = GitHubClient(config.github_token)  # 创建GitHub客户端实例
     hacker_news_client = HackerNewsClient() # 创建 Hacker News 客户端实例
+    arxiv_client = ArxivClient()
     notifier = Notifier(config.email)  # 创建通知器实例
     llm = LLM(config)  # 创建语言模型实例
     report_generator = ReportGenerator(llm, config.report_types)  # 创建报告生成器实例
     subscription_manager = SubscriptionManager(config.subscriptions_file)  # 创建订阅管理器实例
+    keywords_manager = SubscriptionManager(config.arxiv_keywords_file)
 
     # 启动时立即执行（如不需要可注释）
     # github_job(subscription_manager, github_client, report_generator, notifier, config.freq_days)
-    hn_daily_job(hacker_news_client, report_generator, notifier)
+    # hn_daily_job(hacker_news_client, report_generator, notifier)
+    arxiv_job(keywords_manager, arxiv_client, report_generator, notifier)
 
     # 安排 GitHub 的定时任务
     schedule.every(config.freq_days).days.at(
@@ -78,6 +105,11 @@ def main():
 
     # 安排 hn_daily_job 每天早上10点执行一次
     schedule.every().day.at("10:00").do(hn_daily_job, hacker_news_client, report_generator, notifier)
+
+    # 安排 Arxiv 的定时任务
+    schedule.every(config.arxiv_freq_days).days.at(
+        config.arxiv_exec_time
+    ).do(arxiv_job, keywords_manager, arxiv_client, report_generator, notifier)
 
     try:
         # 在守护进程中持续运行

@@ -55,14 +55,16 @@ class Notifier:
         html_report = markdown2.markdown(report)
 
         msg.attach(MIMEText(html_report, 'html'))
+        sent = False
         try:
             with smtplib.SMTP_SSL(self.email_settings['smtp_server'], self.email_settings['smtp_port']) as server:
                 LOG.debug("登录SMTP服务器")
                 server.login(msg['From'], self.email_settings['password'])
                 server.sendmail(msg['From'], msg['To'], msg.as_string())
                 LOG.info("邮件发送成功！")
+                sent = True
         except Exception as e:
-            LOG.error(f"发送邮件失败：{str(e)}")
+            if not sent: LOG.error(f"发送邮件失败：{str(e)}")
 
 if __name__ == '__main__':
     from config import Config

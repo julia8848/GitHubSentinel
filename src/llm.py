@@ -1,6 +1,7 @@
 import json
 import requests
 from openai import OpenAI  # 导入OpenAI库用于访问GPT模型
+from time import sleep  # 导入sleep函数用于延迟
 from logger import LOG  # 导入日志模块
 
 class LLM:
@@ -35,9 +36,29 @@ class LLM:
 
         # 根据选择的模型调用相应的生成报告方法
         if self.model == "openai":
-            return self._generate_report_openai(messages)
+            # if failed, try again. max 3 times
+            for i in range(3):
+                try:
+                    if i > 0:
+                        LOG.info(f"第 {i+1} 次尝试生成报告")
+                    return self._generate_report_openai(messages)
+                except Exception as e:
+                    LOG.error(f"生成报告时发生错误：{e}")
+                    if i < 2:
+                        LOG.info("等待 30 秒后重试")
+                        sleep(30)
         elif self.model == "ollama":
-            return self._generate_report_ollama(messages)
+            # if failed, try again. max 3 times
+            for i in range(3):
+                try:
+                    if i > 0:
+                        LOG.info(f"第 {i+1} 次尝试生成报告")
+                    return self._generate_report_ollama(messages)
+                except Exception as e:
+                    LOG.error(f"生成报告时发生错误：{e}")
+                    if i < 2:
+                        LOG.info("等待 30 秒后重试")
+                        sleep(30)
         else:
             raise ValueError(f"不支持的模型类型: {self.model}")
 
